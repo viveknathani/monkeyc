@@ -13,6 +13,7 @@ typedef struct {
 
 #define IDENTIFIER "IDENTIFIER"
 #define INT "INT"
+#define STRING "STRING"
 
 #define ASSIGN "="
 #define PLUS "+"
@@ -29,10 +30,13 @@ typedef struct {
 
 #define COMMA ","
 #define SEMICOLON ";"
+#define COLON ":"
 #define LPAREN "("
 #define RPAREN ")"
 #define LBRACE "{"
 #define RBRACE "}"
+#define LBRACKET "["
+#define RBRACKET "]"
 
 #define FUNCTION "FUNCTION"
 #define LET "LET"
