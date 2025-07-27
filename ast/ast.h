@@ -188,12 +188,14 @@ HashLiteral *newHashLiteral(Token token, Expression **keys, Expression **values,
                             int count);
 Identifier *newIdentifier(Token token, const char *value);
 IntegerLiteral *newIntegerLiteral(Token token, long long value);
+BooleanLiteral *newBooleanLiteral(Token token, int value);
 PrefixExpression *newPrefixExpression(Token token, const char *op,
                                       Expression *right);
 InfixExpression *newInfixExpression(Token token, Expression *left,
                                     const char *op, Expression *right);
 Expression *wrapIdentifier(Identifier *id);
 Expression *wrapIntegerLiteral(IntegerLiteral *il);
+Expression *wrapBooleanLiteral(BooleanLiteral *bl);
 Expression *wrapPrefixExpression(PrefixExpression *pe);
 Expression *wrapInfixExpression(InfixExpression *ie);
 Expression *wrapIfExpression(IfExpression *ifExpr);
@@ -209,6 +211,7 @@ Statement *wrapExpressionStatement(ExpressionStatement *stmt);
 Statement *wrapBlockStatement(BlockStatement *block);
 char *identifierToString(Identifier *ident);
 char *integerLiteralToString(IntegerLiteral *il);
+char *booleanLiteralToString(BooleanLiteral *bl);
 char *stringLiteralToString(StringLiteral *sl);
 char *prefixExpressionToString(PrefixExpression *pe);
 char *infixExpressionToString(InfixExpression *ie);

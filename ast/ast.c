@@ -43,6 +43,13 @@ IntegerLiteral *newIntegerLiteral(Token token, long long value) {
   return il;
 }
 
+BooleanLiteral *newBooleanLiteral(Token token, int value) {
+  BooleanLiteral *bl = malloc(sizeof(BooleanLiteral));
+  bl->token = cloneToken(token);
+  bl->value = value;
+  return bl;
+}
+
 ExpressionStatement *newExpressionStatement(Token token, Expression *expr) {
   ExpressionStatement *stmt = malloc(sizeof(ExpressionStatement));
   stmt->token = cloneToken(token);
@@ -90,6 +97,13 @@ Expression *wrapIntegerLiteral(IntegerLiteral *il) {
   Expression *expr = malloc(sizeof(Expression));
   expr->type = NODE_INTEGER_LITERAL;
   expr->integerLiteral = il;
+  return expr;
+}
+
+Expression *wrapBooleanLiteral(BooleanLiteral *bl) {
+  Expression *expr = malloc(sizeof(Expression));
+  expr->type = NODE_BOOLEAN;
+  expr->booleanLiteral = bl;
   return expr;
 }
 
@@ -146,6 +160,10 @@ char *identifierToString(Identifier *ident) { return strdup(ident->value); }
 
 char *integerLiteralToString(IntegerLiteral *il) {
   return strdup(il->token.literal);
+}
+
+char *booleanLiteralToString(BooleanLiteral *bl) {
+  return strdup(bl->token.literal);
 }
 
 char *prefixExpressionToString(PrefixExpression *pe) {
@@ -206,6 +224,8 @@ char *expressionToString(Expression *expr) {
     return identifierToString(expr->identifier);
   } else if (strcmp(expr->type, NODE_INTEGER_LITERAL) == 0) {
     return integerLiteralToString(expr->integerLiteral);
+  } else if (strcmp(expr->type, NODE_BOOLEAN) == 0) {
+    return booleanLiteralToString(expr->booleanLiteral);
   } else if (strcmp(expr->type, NODE_STRING_LITERAL) == 0) {
     return stringLiteralToString(expr->stringLiteral);
   } else if (strcmp(expr->type, NODE_PREFIX_EXPRESSION) == 0) {
