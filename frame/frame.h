@@ -9,6 +9,7 @@ typedef struct {
   int basePointer;
 } Frame;
 
+Frame* newFrame(Instructions instructions, int basePointer);
 Instructions getFrameInstructions(Frame *frame);
 
 #endif
