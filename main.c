@@ -38,6 +38,25 @@ char *readFile(const char *filename) {
 #define CONST_INTEGER 1
 #define CONST_STRING  2
 
+// Little-endian encoding/decoding helpers
+static void write_le32(unsigned char *buf, uint32_t val) {
+  buf[0] = val & 0xFF;
+  buf[1] = (val >> 8) & 0xFF;
+  buf[2] = (val >> 16) & 0xFF;
+  buf[3] = (val >> 24) & 0xFF;
+}
+
+static void write_le64(unsigned char *buf, uint64_t val) {
+  buf[0] = val & 0xFF;
+  buf[1] = (val >> 8) & 0xFF;
+  buf[2] = (val >> 16) & 0xFF;
+  buf[3] = (val >> 24) & 0xFF;
+  buf[4] = (val >> 32) & 0xFF;
+  buf[5] = (val >> 40) & 0xFF;
+  buf[6] = (val >> 48) & 0xFF;
+  buf[7] = (val >> 56) & 0xFF;
+}
+
 SerializedBytecode serializeBytecode(ByteCode *bc) {
   int instr_len = bc->instructionCount;
   int const_count = bc->constantsCount;
@@ -76,13 +95,13 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
   size_t offset = 0;
 
 
-  memcpy(buf + offset, &instr_len, sizeof(int32_t));
+  write_le32(buf + offset, instr_len);
   offset += sizeof(int32_t);
 
   memcpy(buf + offset, bc->instructions, instr_len);
   offset += instr_len;
 
-  memcpy(buf + offset, &const_count, sizeof(int32_t));
+  write_le32(buf + offset, const_count);
   offset += sizeof(int32_t);
 
   for (int i = 0; i < const_count; i++) {
@@ -94,7 +113,7 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
       memcpy(buf + offset, &tag, 1);
       offset += 1;
 
-      memcpy(buf + offset, &obj->integer->value, sizeof(int64_t));
+      write_le64(buf + offset, obj->integer->value);
       offset += sizeof(int64_t);
 
       printf("   ↳ INTEGER value = %lld (8 bytes)\n", obj->integer->value);
@@ -106,7 +125,7 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
       memcpy(buf + offset, &tag, 1);
       offset += 1;
 
-      memcpy(buf + offset, &len, sizeof(int32_t));
+      write_le32(buf + offset, len);
       offset += sizeof(int32_t);
 
       memcpy(buf + offset, obj->string->value, len);
@@ -162,7 +181,12 @@ void buildExecutable(const char *sourcePath, const char *outputPath) {
 
   // Write marker + length + bytecode
   fwrite(BYTECODE_MARKER, 1, strlen(BYTECODE_MARKER), out);
-  fwrite(&sb.length, sizeof(int), 1, out);
+
+  // Write bytecode length in little-endian format
+  unsigned char len_bytes[4];
+  write_le32(len_bytes, sb.length);
+  fwrite(len_bytes, 1, 4, out);
+
   fwrite(sb.data, 1, sb.length, out);
   fclose(out);
 

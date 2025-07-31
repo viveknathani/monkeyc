@@ -10,6 +10,25 @@
 #define CONST_INTEGER 1
 #define CONST_STRING  2
 
+// Little-endian decoding helpers
+static uint32_t read_le32(const unsigned char *buf) {
+  return (uint32_t)buf[0] |
+         ((uint32_t)buf[1] << 8) |
+         ((uint32_t)buf[2] << 16) |
+         ((uint32_t)buf[3] << 24);
+}
+
+static uint64_t read_le64(const unsigned char *buf) {
+  return (uint64_t)buf[0] |
+         ((uint64_t)buf[1] << 8) |
+         ((uint64_t)buf[2] << 16) |
+         ((uint64_t)buf[3] << 24) |
+         ((uint64_t)buf[4] << 32) |
+         ((uint64_t)buf[5] << 40) |
+         ((uint64_t)buf[6] << 48) |
+         ((uint64_t)buf[7] << 56);
+}
+
 ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
   ByteCode *bc = malloc(sizeof(ByteCode));
   int offset = 0;
@@ -19,7 +38,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
     exit(1);
   }
 
-  int32_t instr_len = *(int32_t *)(data + offset);
+  int32_t instr_len = read_le32(data + offset);
   offset += sizeof(int32_t);
 
   bc->instructions = malloc(instr_len);
@@ -32,7 +51,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
     exit(1);
   }
 
-  int32_t const_count = *(int32_t *)(data + offset);
+  int32_t const_count = read_le32(data + offset);
   offset += sizeof(int32_t);
   bc->constantsCount = const_count;
   bc->constants = malloc(sizeof(Object) * const_count);
@@ -56,7 +75,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
         exit(1);
       }
 
-      int64_t val = *(int64_t *)(data + offset);
+      int64_t val = read_le64(data + offset);
       offset += sizeof(int64_t);
 
       Integer *intObj = malloc(sizeof(Integer));
@@ -73,7 +92,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
         exit(1);
       }
 
-      int32_t len = *(int32_t *)(data + offset);
+      int32_t len = read_le32(data + offset);
       offset += sizeof(int32_t);
 
       if (offset + len > total_len) {
@@ -120,7 +139,16 @@ int main(int argc, char **argv) {
   }
   fclose(self);
 
-  unsigned char *marker = memmem(data, size, BYTECODE_MARKER, strlen(BYTECODE_MARKER));
+  // Find the LAST occurrence of the marker (search backwards)
+  unsigned char *marker = NULL;
+  size_t marker_len = strlen(BYTECODE_MARKER);
+  for (long i = size - marker_len; i >= 0; i--) {
+    if (memcmp(data + i, BYTECODE_MARKER, marker_len) == 0) {
+      marker = data + i;
+      break;
+    }
+  }
+  
   if (!marker) {
     fprintf(stderr, "❌ No bytecode marker found.\n");
     return 1;
@@ -134,11 +162,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  printf("Bytecode length bytes: %02x %02x %02x %02x\n",
-         data[len_offset], data[len_offset+1], data[len_offset+2], data[len_offset+3]);
 
-  int32_t bytecode_len = 0;
-  memcpy(&bytecode_len, data + len_offset, sizeof(int32_t));
+
+  int32_t bytecode_len = read_le32(data + len_offset);
   printf("📦 Bytecode length: %d bytes\n", bytecode_len);
 
   unsigned char *bytecode = data + len_offset + sizeof(int32_t);
