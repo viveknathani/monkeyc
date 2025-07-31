@@ -1,1 +1,3 @@
 bin/
+*.mon
+monkey

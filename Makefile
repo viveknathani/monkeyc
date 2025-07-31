@@ -5,16 +5,22 @@ BIN_DIR := bin
 $(shell mkdir -p $(BIN_DIR))
 
 SRC := $(filter-out tests/%.c, $(wildcard */*.c)) main.c
-OBJ := $(patsubst %.c,$(BIN_DIR)/%.o,$(SRC))
+VM_STUB_SRC := $(filter-out main.c, $(SRC)) vm_stub.c
+MONKEYC_OBJ := $(patsubst %.c,$(BIN_DIR)/%.o,$(SRC))
+VM_STUB_OBJ := $(patsubst %.c,$(BIN_DIR)/%.o,$(VM_STUB_SRC))
 OUT := $(BIN_DIR)/monkeyc
+VM_STUB_OUT := $(BIN_DIR)/vm_stub
 
 TEST_SOURCES := $(wildcard tests/test_*.c)
 TEST_BINS := $(patsubst tests/%.c, bin/%, $(TEST_SOURCES))
 TEST_OBJS := $(filter-out $(BIN_DIR)/main.o, $(OBJ))
 
-all: $(OUT)
+all: $(OUT) $(VM_STUB_OUT)
 
-$(OUT): $(OBJ)
+$(OUT): $(MONKEYC_OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(VM_STUB_OUT): $(VM_STUB_OBJ)
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(BIN_DIR)/%.o: %.c
