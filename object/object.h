@@ -76,9 +76,10 @@ typedef struct {
 } HashTableEntry;
 
 struct Hash {
-  // an array at the moment, to be replaced by an actual hash table
-  // implementation at the end
-  HashTableEntry *pairs;
+  // For now we store key-value pairs in a simple contiguous array.
+  // In the future this can be replaced by a real hash table implementation.
+  HashPair *pairs;
+  int count; // number of pairs stored
 };
 
 struct Integer {
@@ -118,6 +119,7 @@ struct CompiledFunction {
   Instructions instructions;
   int numLocals;
   int numParameters;
+  int instructionCount;
 };
 
 struct EnvironmentTableEntry {
@@ -151,5 +153,6 @@ Object *getFromEnvrionment(Environment *environment, char *name);
 Object *setFromEnvrionment(Environment *environment, char *name, Object value);
 Object *newError(char *message);
 Builtin *getBuiltinByName(char *name);
+void printObject(Object *object);
 
 #endif

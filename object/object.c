@@ -65,12 +65,32 @@ char *inspect(Object *obj) {
     snprintf(buf, sizeof(buf), "null");
   } else if (strcmp(obj->type, StringObj) == 0) {
     snprintf(buf, sizeof(buf), "%s", obj->string->value);
+  } else if (strcmp(obj->type, ArrayObj) == 0) {
+    // Build a simple comma-separated list of element representations.
+    strcpy(buf, "[");
+    for (int i = 0; i < obj->array->count; i++) {
+      char *elemRepr = inspect(&obj->array->elements[i]);
+      strncat(buf, elemRepr, sizeof(buf) - strlen(buf) - 1);
+      free(elemRepr);
+      if (i < obj->array->count - 1) {
+        strncat(buf, ", ", sizeof(buf) - strlen(buf) - 1);
+      }
+    }
+    strncat(buf, "]", sizeof(buf) - strlen(buf) - 1);
+  } else if (strcmp(obj->type, HashObj) == 0) {
+    snprintf(buf, sizeof(buf), "<hash with %d pairs>",
+             obj->hash->pairs ? 1 : 0);
+  } else if (strcmp(obj->type, CompiledFunctionObj) == 0) {
+    snprintf(buf, sizeof(buf), "<compiled fn at %p>",
+             (void *)obj->compiledFunction);
+  } else if (strcmp(obj->type, BuiltinObj) == 0) {
+    snprintf(buf, sizeof(buf), "<builtin fn>");
   } else if (strcmp(obj->type, ReturnValueObj) == 0) {
     return inspect(&obj->returnValue->value);
   } else if (strcmp(obj->type, ErrorObj) == 0) {
     snprintf(buf, sizeof(buf), "ERROR: %s", obj->error->message);
   } else {
-    snprintf(buf, sizeof(buf), "<unknown>");
+    snprintf(buf, sizeof(buf), "<unknown %s>", obj->type);
   }
   return strdup(buf);
 }
@@ -228,4 +248,38 @@ HashKey getHashKey(Object *object) {
   }
 
   return key;
+}
+
+void printObject(Object *object) {
+  if (object == NULL) {
+    printf("[NULL] (null)\n");
+    return;
+  }
+  printf("[%s] ", object->type);
+  if (strcmp(object->type, IntegerObj) == 0) {
+    printf("%lld\n", (long long)object->integer->value);
+  } else if (strcmp(object->type, BooleanObj) == 0) {
+    printf("%s\n", object->boolean->value ? "true" : "false");
+  } else if (strcmp(object->type, NullObj) == 0) {
+    printf("null\n");
+  } else if (strcmp(object->type, StringObj) == 0) {
+    printf("\"%s\"\n", object->string->value);
+  } else if (strcmp(object->type, ArrayObj) == 0) {
+    printf("array[%d]\n", object->array->count);
+  } else if (strcmp(object->type, HashObj) == 0) {
+    printf("hash@%p\n", (void *)object->hash->pairs);
+  } else if (strcmp(object->type, CompiledFunctionObj) == 0) {
+    printf("compiled_fn@%p\n", (void *)object->compiledFunction);
+  } else if (strcmp(object->type, BuiltinObj) == 0) {
+    printf("<builtin>\n");
+  } else if (strcmp(object->type, ReturnValueObj) == 0) {
+    printf("(return) ");
+    printObject(&object->returnValue->value);
+  } else if (strcmp(object->type, ErrorObj) == 0) {
+    printf("ERROR: %s\n", object->error->message);
+  } else {
+    char *repr = inspect(object);
+    printf("%s\n", repr);
+    free(repr);
+  }
 }

@@ -82,6 +82,16 @@ int compileProgram(Compiler *compiler, Program *program) {
       return -1;
     }
   }
+
+  /*
+   * If the last emitted instruction was a pop, remove it. This keeps the
+   * result of the final expression on the stack so that the VM can inspect
+   * it after execution (needed by the unit tests).
+   */
+  if (lastInstructionIs(compiler, OpPop)) {
+    removeLastPop(compiler);
+  }
+
   return 0;
 }
 
@@ -366,6 +376,7 @@ static int compileExpression(Compiler *compiler, Expression *expression) {
     compiledFn->type = CompiledFunctionObj;
     compiledFn->compiledFunction = malloc(sizeof(CompiledFunction));
     compiledFn->compiledFunction->instructions = instructions;
+    compiledFn->compiledFunction->instructionCount = instructionsLength;
     compiledFn->compiledFunction->numLocals = numLocals;
     compiledFn->compiledFunction->numParameters = funcLit->param_count;
 
@@ -568,6 +579,7 @@ ByteCode *getByteCode(Compiler *compiler) {
   bytecode->constants = compiler->constants;
   bytecode->constantsCount = compiler->constantsCount;
   bytecode->constantsCapacity = compiler->constantsCapacity;
+  bytecode->instructionCount = getCurrentInstructionsLength(compiler);
   return bytecode;
 }
 

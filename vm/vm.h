@@ -39,5 +39,26 @@ Frame* currentFrame(VM *vm);
 void pushFrame(VM *vm, Frame *frame);
 Frame* popFrame(VM *vm);
 int run(VM* vm);
+int push(VM *vm, Object *object);
+Object* pop(VM *vm);
+Object* stackTop(VM *vm);
+Object* lastPoppedStackElem(VM *vm);
+Object* nativeBoolToBooleanObject(bool input);
+bool isTruthy(Object *obj);
+int executeBinaryOperation(VM *vm, OpCode opCode);
+int executeBinaryIntegerOperation(VM *vm, OpCode opCode, Object *left, Object *right);
+int executeBinaryStringOperation(VM *vm, OpCode opCode, Object *left, Object *right);
+int executeComparison(VM *vm, OpCode opCode);
+int executeIntegerComparison(VM *vm, OpCode opCode, Object *left, Object *right);
+int executeBangOperator(VM *vm);
+int executeMinusOperator(VM *vm);
+int executeIndexExpression(VM *vm, Object *left, Object *index);
+int executeArrayIndex(VM *vm, Object *array, Object *index);
+int executeHashIndex(VM *vm, Object *hash, Object *index);
+Object* buildArray(VM *vm, int startIndex, int endIndex);
+Object* buildHash(VM *vm, int startIndex, int endIndex);
+int executeCall(VM *vm, int numArgs);
+int callCompiledFunction(VM *vm, CompiledFunction *fn, int numArgs);
+int callBuiltin(VM *vm, Builtin *builtin, int numArgs);
 
 #endif

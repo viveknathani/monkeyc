@@ -10,6 +10,7 @@ typedef struct {
   Object *constants;
   int constantsCount;
   int constantsCapacity;
+  int instructionCount;
 } ByteCode;
 
 typedef struct {
