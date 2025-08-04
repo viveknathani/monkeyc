@@ -13,7 +13,7 @@ VM_STUB_OUT := $(BIN_DIR)/vm_stub
 
 TEST_SOURCES := $(wildcard tests/test_*.c)
 TEST_BINS := $(patsubst tests/%.c, bin/%, $(TEST_SOURCES))
-TEST_OBJS := $(filter-out $(BIN_DIR)/main.o, $(OBJ))
+TEST_OBJS := $(filter-out $(BIN_DIR)/main.o, $(MONKEYC_OBJ))
 
 all: $(OUT) $(VM_STUB_OUT)
 

@@ -168,7 +168,6 @@ struct HashLiteral {
   Expression **values;
   int count;
 };
-Token cloneToken(Token original);
 LetStatement *newLetStatement(Token token, Identifier *name, Expression *value);
 ReturnStatement *newReturnStatement(Token token, Expression *value);
 ExpressionStatement *newExpressionStatement(Token token, Expression *expr);

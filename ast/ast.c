@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "../token/token.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,13 +13,6 @@ char *strdup(const char *s) {
   return copy;
 }
 #endif
-
-Token cloneToken(Token original) {
-  Token t;
-  t.type = original.type;
-  t.literal = strdup(original.literal);
-  return t;
-}
 
 LetStatement *newLetStatement(Token token, Identifier *name,
                               Expression *value) {
