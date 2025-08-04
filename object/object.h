@@ -70,16 +70,20 @@ struct HashKey {
   uint64_t value;
 };
 
-typedef struct {
-  HashKey key;
-  HashPair hashPair;
-} HashTableEntry;
+// hash table bucket entry - forms a linked list for collision handling
+typedef struct HashEntry HashEntry;
+struct HashEntry {
+  Object key;
+  Object value;
+  HashEntry *next;  // for collision chaining
+};
 
+// hash table with buckets for O(1) average lookup
 struct Hash {
-  // For now we store key-value pairs in a simple contiguous array.
-  // In the future this can be replaced by a real hash table implementation.
-  HashPair *pairs;
-  int count; // number of pairs stored
+  HashEntry **buckets;  // array of bucket pointers
+  int bucketCount;      // number of buckets (power of 2)
+  int size;            // number of key-value pairs stored
+  int capacity;        // current capacity before resize
 };
 
 struct Integer {
@@ -147,6 +151,11 @@ extern BuiltinEntry builtins[];
 
 char *inspect(Object *object);
 HashKey getHashKey(Object *object);
+Hash *newHash();
+void freeHash(Hash *hash);
+int hashSet(Hash *hash, Object *key, Object *value);
+Object *hashGet(Hash *hash, Object *key);
+int hashKeysEqual(Object *key1, Object *key2);
 Environment *newEnviroment();
 Environment *newEnclosedEnvironment(Environment *environment);
 Object *getFromEnvrionment(Environment *environment, char *name);

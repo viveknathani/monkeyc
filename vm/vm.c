@@ -371,23 +371,11 @@ int executeArrayIndex(VM *vm, Object *array, Object *index) {
 }
 
 int executeHashIndex(VM *vm, Object *hash, Object *index) {
-  Hash *hashObj = hash->hash;
-  for (int i = 0; i < hashObj->count; i++) {
-    Object *key = &hashObj->pairs[i].key;
-    bool match = false;
-    if (strcmp(key->type, StringObj) == 0 &&
-        strcmp(index->type, StringObj) == 0) {
-      match = strcmp(key->string->value, index->string->value) == 0;
-    } else if (strcmp(key->type, IntegerObj) == 0 &&
-               strcmp(index->type, IntegerObj) == 0) {
-      match = key->integer->value == index->integer->value;
-    }
-
-    if (match) {
-      return push(vm, &hashObj->pairs[i].value);
-    }
+  // perform O(1) lookup using hashGet
+  Object *value = hashGet(hash->hash, index);
+  if (value != NULL) {
+    return push(vm, value);
   }
-
   // key not found – push null
   Object nullObj = {.type = NullObj, .null = &null_obj};
   return push(vm, &nullObj);
@@ -410,26 +398,19 @@ Object *buildArray(VM *vm, int startIndex, int endIndex) {
 }
 
 Object *buildHash(VM *vm, int startIndex, int endIndex) {
-  /*
-   * The stack currently contains key / value objects in sequence:
-   *   ... key1, value1, key2, value2, ...
-   * startIndex points to key1 and endIndex is the original vm->sp value
-   * (one past the last pushed element).
-   */
+  // create a new hash object using the O(1) hash table implementation
   int numElements = endIndex - startIndex;
   int numPairs = numElements / 2;
 
   Object *hashObj = malloc(sizeof(Object));
   hashObj->type = HashObj;
-  hashObj->hash = malloc(sizeof(Hash));
-  hashObj->hash->count = numPairs;
-  hashObj->hash->pairs = malloc(sizeof(HashPair) * numPairs);
+  hashObj->hash = newHash();
 
+  // insert each key-value pair from the stack into the hash table
   for (int i = 0; i < numPairs; i++) {
-    Object keyObj = vm->stack[startIndex + (i * 2)];
-    Object valueObj = vm->stack[startIndex + (i * 2) + 1];
-    hashObj->hash->pairs[i].key = keyObj;
-    hashObj->hash->pairs[i].value = valueObj;
+    Object *keyObj = &vm->stack[startIndex + (i * 2)];
+    Object *valueObj = &vm->stack[startIndex + (i * 2) + 1];
+    hashSet(hashObj->hash, keyObj, valueObj);
   }
 
   return hashObj;
