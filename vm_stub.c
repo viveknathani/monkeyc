@@ -34,7 +34,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
   int offset = 0;
 
   if (offset + sizeof(int32_t) > total_len) {
-    fprintf(stderr, "❌ Truncated bytecode: no instruction length\n");
+    fprintf(stderr, "❌ truncated bytecode: no instruction length\n");
     exit(1);
   }
 
@@ -47,7 +47,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
   offset += instr_len;
 
   if (offset + sizeof(int32_t) > total_len) {
-    fprintf(stderr, "❌ Truncated bytecode: no constant count\n");
+    fprintf(stderr, "❌ truncated bytecode: no constant count\n");
     exit(1);
   }
 
@@ -56,13 +56,9 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
   bc->constantsCount = const_count;
   bc->constants = malloc(sizeof(Object) * const_count);
 
-  printf("📥 Deserializing bytecode...\n");
-  printf("   ↳ Instructions: %d bytes\n", instr_len);
-  printf("   ↳ Constants    : %d\n", const_count);
-
   for (int i = 0; i < const_count; i++) {
     if (offset >= total_len) {
-      fprintf(stderr, "❌ Unexpected EOF while reading constant[%d] tag\n", i);
+      fprintf(stderr, "❌ unexpected EOF while reading constant[%d] tag\n", i);
       exit(1);
     }
 
@@ -71,7 +67,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
 
     if (tag == CONST_INTEGER) {
       if (offset + sizeof(int64_t) > total_len) {
-        fprintf(stderr, "❌ Truncated integer constant at [%d]\n", i);
+        fprintf(stderr, "❌ truncated integer constant at [%d]\n", i);
         exit(1);
       }
 
@@ -84,11 +80,9 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
       bc->constants[i].type = "Integer";
       bc->constants[i].integer = intObj;
 
-      printf("   🔢 Constant[%d] = INTEGER %lld\n", i, val);
-
     } else if (tag == CONST_STRING) {
       if (offset + sizeof(int32_t) > total_len) {
-        fprintf(stderr, "❌ Truncated string length at [%d]\n", i);
+        fprintf(stderr, "❌ truncated string length at [%d]\n", i);
         exit(1);
       }
 
@@ -96,7 +90,7 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
       offset += sizeof(int32_t);
 
       if (offset + len > total_len) {
-        fprintf(stderr, "❌ Truncated string data at [%d]\n", i);
+        fprintf(stderr, "❌ truncated string data at [%d]\n", i);
         exit(1);
       }
 
@@ -111,9 +105,8 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
       bc->constants[i].type = "String";
       bc->constants[i].string = strObj;
 
-      printf("   🔤 Constant[%d] = STRING \"%s\"\n", i, str);
     } else {
-      fprintf(stderr, "❌ Unknown constant tag: %d at constant[%d]\n", tag, i);
+      fprintf(stderr, "❌ unknown constant tag: %d at constant[%d]\n", tag, i);
       exit(1);
     }
   }
@@ -122,11 +115,8 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
 }
 
 int main(int argc, char **argv) {
-  printf("🚀 vm_stub started\n");
-
   FILE *self = fopen(argv[0], "rb");
   if (!self) { perror("fopen self"); return 1; }
-  printf("opened self\n");
 
   fseek(self, 0, SEEK_END);
   long size = ftell(self);
@@ -134,7 +124,7 @@ int main(int argc, char **argv) {
 
   unsigned char *data = malloc(size);
   if (fread(data, 1, size, self) != size) {
-    fprintf(stderr, "❌ Failed to read full binary\n");
+    fprintf(stderr, "❌ failed to read full binary\n");
     return 1;
   }
   fclose(self);
@@ -150,7 +140,7 @@ int main(int argc, char **argv) {
   }
   
   if (!marker) {
-    fprintf(stderr, "❌ No bytecode marker found.\n");
+    fprintf(stderr, "❌ no bytecode marker found.\n");
     return 1;
   }
 
@@ -158,38 +148,31 @@ int main(int argc, char **argv) {
   size_t len_offset = marker_offset + strlen(BYTECODE_MARKER);
 
   if (len_offset + sizeof(int32_t) > size) {
-    fprintf(stderr, "❌ Not enough space for bytecode length\n");
+    fprintf(stderr, "❌ not enough space for bytecode length\n");
     return 1;
   }
 
-
-
   int32_t bytecode_len = read_le32(data + len_offset);
-  printf("📦 Bytecode length: %d bytes\n", bytecode_len);
 
   unsigned char *bytecode = data + len_offset + sizeof(int32_t);
 
   if (bytecode + bytecode_len > data + size) {
-    fprintf(stderr, "❌ Bytecode exceeds file size\n");
+    fprintf(stderr, "❌ bytecode exceeds file size\n");
     return 1;
   }
 
   ByteCode *bc = deserializeBytecode(bytecode, bytecode_len);
-  printf("📥 Deserializing bytecode...\n");
-  printf("   ↳ Instructions: %d bytes\n", bc->instructionCount);
-  printf("   ↳ Constants    : %d\n", bc->constantsCount);
 
   VM *vm = newVM(bc);
   run(vm);
 
   Object *top = stackTop(vm);
   if (!top) {
-    printf("🪹 Stack empty\n");
     return 0;
   }
 
   char *out = inspect(top);
-  printf("🖨️  Result: %s\n", out);
+  printf("%s\n", out);
 
   return 0;
 }
