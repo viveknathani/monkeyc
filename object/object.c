@@ -62,6 +62,9 @@ Object *setInEnvironment(Environment *env, char *name, Object value) {
 // === Object inspection ===
 
 char *inspect(Object *obj) {
+  if (obj == NULL) {
+    return NULL;
+  }
   char buf[512];
   if (strcmp(obj->type, IntegerObj) == 0) {
     snprintf(buf, sizeof(buf), "%lld", (long long)obj->integer->value);
@@ -275,7 +278,7 @@ Hash *newHash() {
 // free hash table and all entries
 void freeHash(Hash *hash) {
   if (!hash) return;
-  
+
   for (int i = 0; i < hash->bucketCount; i++) {
     HashEntry *entry = hash->buckets[i];
     while (entry) {
@@ -293,7 +296,7 @@ int hashKeysEqual(Object *key1, Object *key2) {
   if (strcmp(key1->type, key2->type) != 0) {
     return 0;
   }
-  
+
   if (strcmp(key1->type, IntegerObj) == 0) {
     return key1->integer->value == key2->integer->value;
   } else if (strcmp(key1->type, BooleanObj) == 0) {
@@ -301,7 +304,7 @@ int hashKeysEqual(Object *key1, Object *key2) {
   } else if (strcmp(key1->type, StringObj) == 0) {
     return strcmp(key1->string->value, key2->string->value) == 0;
   }
-  
+
   return 0;
 }
 
@@ -309,13 +312,13 @@ int hashKeysEqual(Object *key1, Object *key2) {
 void hashResize(Hash *hash) {
   int oldBucketCount = hash->bucketCount;
   HashEntry **oldBuckets = hash->buckets;
-  
+
   // double the bucket count
   hash->bucketCount *= 2;
   hash->capacity = (int)(hash->bucketCount * LOAD_FACTOR_THRESHOLD);
   hash->buckets = calloc(hash->bucketCount, sizeof(HashEntry*));
   hash->size = 0;
-  
+
   // rehash all existing entries
   for (int i = 0; i < oldBucketCount; i++) {
     HashEntry *entry = oldBuckets[i];
@@ -326,7 +329,7 @@ void hashResize(Hash *hash) {
       entry = next;
     }
   }
-  
+
   free(oldBuckets);
 }
 
@@ -335,12 +338,12 @@ int hashSet(Hash *hash, Object *key, Object *value) {
   if (hash->size >= hash->capacity) {
     hashResize(hash);
   }
-  
+
   HashKey hashKey = getHashKey(key);
   int bucketIndex = hashKey.value & (hash->bucketCount - 1);  // fast modulo for power of 2
-  
+
   HashEntry *entry = hash->buckets[bucketIndex];
-  
+
   // check if key already exists
   while (entry) {
     if (hashKeysEqual(&entry->key, key)) {
@@ -349,7 +352,7 @@ int hashSet(Hash *hash, Object *key, Object *value) {
     }
     entry = entry->next;
   }
-  
+
   // create new entry
   HashEntry *newEntry = malloc(sizeof(HashEntry));
   newEntry->key = *key;
@@ -357,7 +360,7 @@ int hashSet(Hash *hash, Object *key, Object *value) {
   newEntry->next = hash->buckets[bucketIndex];
   hash->buckets[bucketIndex] = newEntry;
   hash->size++;
-  
+
   return 0;
 }
 
@@ -365,16 +368,16 @@ int hashSet(Hash *hash, Object *key, Object *value) {
 Object *hashGet(Hash *hash, Object *key) {
   HashKey hashKey = getHashKey(key);
   int bucketIndex = hashKey.value & (hash->bucketCount - 1);  // fast modulo for power of 2
-  
+
   HashEntry *entry = hash->buckets[bucketIndex];
-  
+
   while (entry) {
     if (hashKeysEqual(&entry->key, key)) {
       return &entry->value;
     }
     entry = entry->next;
   }
-  
+
   return NULL;  // key not found
 }
 

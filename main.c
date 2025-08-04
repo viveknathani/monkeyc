@@ -45,25 +45,25 @@ char *readFile(const char *filename) {
   if (!fp) {
     return NULL;
   }
-  
+
   if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
     return NULL;
   }
-  
+
   long size = ftell(fp);
   if (size < 0) {
     fclose(fp);
     return NULL;
   }
-  
+
   rewind(fp);
   char *buffer = malloc(size + 1);
   if (!buffer) {
     fclose(fp);
     return NULL;
   }
-  
+
   size_t read_size = fread(buffer, 1, size, fp);
   buffer[read_size] = '\0';
   fclose(fp);
@@ -181,10 +181,6 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
   return sb;
 }
 
-
-
-
-
 void buildExecutable(const char *sourcePath, const char *outputPath) {
   char *input = readFile(sourcePath);
   if (!input) {
@@ -239,7 +235,10 @@ void runSource(char *input) {
   ByteCode *bytecode =getByteCode(compiler);
 
   VM *vm = newVM(bytecode);
+
+  printf("running vm...\n");
   run(vm);
+  printf("ran vm...\n");
   char *buf = inspect(stackTop(vm));
   printf("%s\n", buf) ;
 }
@@ -265,11 +264,11 @@ void printUsage(const char *program_name) {
   printf("  %s build <file.mon> [options] Compile to executable\n", program_name);
   printf("  %s help                      Show this help message\n", program_name);
   printf("  %s version                   Show version information\n\n", program_name);
-  
+
   printf("BUILD OPTIONS:\n");
   printf("  -o <output>                  Specify output filename\n");
   printf("                               (default: input filename without extension)\n\n");
-  
+
   printf("EXAMPLES:\n");
   printf("  %s                           # Start REPL\n", program_name);
   printf("  %s hello.mon                 # Run hello.mon\n", program_name);
@@ -286,30 +285,30 @@ void printVersion() {
 // --- Generate default output filename ---
 char *getDefaultOutputName(const char *input_file) {
   if (!input_file) return NULL;
-  
+
   char *output = malloc(strlen(input_file) + 1);
   if (!output) return NULL;
-  
+
   strcpy(output, input_file);
-  
+
   // Remove .mon extension if present
   char *dot = strrchr(output, '.');
   if (dot && strcmp(dot, ".mon") == 0) {
     *dot = '\0';
   }
-  
+
   return output;
 }
 
 // --- Parse command line arguments ---
 ParsedArgs parseArgs(int argc, char **argv) {
   ParsedArgs args = {0};
-  
+
   if (argc == 1) {
     args.type = CMD_REPL;
     return args;
   }
-  
+
   if (argc == 2) {
     if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
       args.type = CMD_HELP;
@@ -322,11 +321,11 @@ ParsedArgs parseArgs(int argc, char **argv) {
     }
     return args;
   }
-  
+
   if (argc >= 3 && strcmp(argv[1], "build") == 0) {
     args.type = CMD_BUILD;
     args.input_file = argv[2];
-    
+
     // Parse build options
     for (int i = 3; i < argc; i++) {
       if (strcmp(argv[i], "-o") == 0) {
@@ -344,15 +343,15 @@ ParsedArgs parseArgs(int argc, char **argv) {
         return args;
       }
     }
-    
+
     // Set default output name if not specified
     if (!args.output_file) {
       args.output_file = getDefaultOutputName(args.input_file);
     }
-    
+
     return args;
   }
-  
+
   args.type = CMD_INVALID;
   args.error_message = "Error: Invalid command. Use 'monkeyc help' for usage information.";
   return args;
@@ -364,49 +363,49 @@ bool validateInputFile(const char *filename) {
     fprintf(stderr, "Error: No input file specified\n");
     return false;
   }
-  
+
   // Check if file exists and is readable
   if (access(filename, R_OK) != 0) {
     fprintf(stderr, "Error: Cannot read file '%s'\n", filename);
     return false;
   }
-  
+
   // Check if it's a .mon file (optional but good UX)
   const char *ext = strrchr(filename, '.');
   if (!ext || strcmp(ext, ".mon") != 0) {
     fprintf(stderr, "Warning: '%s' doesn't have a .mon extension\n", filename);
   }
-  
+
   return true;
 }
 
 int main(int argc, char **argv) {
   ParsedArgs args = parseArgs(argc, argv);
-  
+
   switch (args.type) {
     case CMD_REPL:
       printf("MonkeyC v%s - Interactive REPL\n", VERSION);
       printf("Type 'exit' or press Ctrl+C to quit\n\n");
       repl();
       break;
-      
+
     case CMD_RUN: {
       if (!validateInputFile(args.input_file)) {
         return 1;
       }
-      
+
       char *input = readFile(args.input_file);
       if (!input) {
         fprintf(stderr, "Error: Failed to read file '%s'\n", args.input_file);
         return 1;
       }
-      
+
       printf("Running '%s'...\n", args.input_file);
       runSource(input);
       free(input);
       break;
     }
-    
+
     case CMD_BUILD: {
       if (!validateInputFile(args.input_file)) {
         if (args.output_file && args.output_file != args.input_file) {
@@ -414,30 +413,30 @@ int main(int argc, char **argv) {
         }
         return 1;
       }
-      
+
       printf("Building '%s' -> '%s'...\n", args.input_file, args.output_file);
       buildExecutable(args.input_file, args.output_file);
       printf("✅ Build completed successfully!\n");
-      
+
       if (args.output_file && args.output_file != args.input_file) {
         free(args.output_file);
       }
       break;
     }
-    
+
     case CMD_HELP:
       printUsage(argv[0]);
       break;
-      
+
     case CMD_VERSION:
       printVersion();
       break;
-      
+
     case CMD_INVALID:
       fprintf(stderr, "%s\n\n", args.error_message);
       printUsage(argv[0]);
       return 1;
   }
-  
+
   return 0;
 }
