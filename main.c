@@ -73,6 +73,10 @@ char *readFile(const char *filename) {
 #define CONST_INTEGER 1
 #define CONST_STRING  2
 #define CONST_COMPILED_FUNCTION 3
+#define CONST_BOOLEAN 4
+#define CONST_NULL 5
+#define CONST_ARRAY 6
+#define CONST_HASH 7
 
 // Little-endian encoding/decoding helpers
 static void write_le32(unsigned char *buf, uint32_t val) {
@@ -93,6 +97,121 @@ static void write_le64(unsigned char *buf, uint64_t val) {
   buf[7] = (val >> 56) & 0xFF;
 }
 
+// Forward declaration
+static size_t calculateObjectSize(Object *obj);
+
+// Calculate size needed to serialize an object
+static size_t calculateObjectSize(Object *obj) {
+  if (strcmp(obj->type, "Integer") == 0) {
+    return 1 + sizeof(int64_t); // tag + value
+  } else if (strcmp(obj->type, "String") == 0) {
+    return 1 + sizeof(int32_t) + strlen(obj->string->value); // tag + length + content
+  } else if (strcmp(obj->type, "Boolean") == 0) {
+    return 1 + 1; // tag + bool value (1 byte)
+  } else if (strcmp(obj->type, "Null") == 0) {
+    return 1; // just tag
+  } else if (strcmp(obj->type, "Array") == 0) {
+    size_t size = 1 + sizeof(int32_t); // tag + count
+    for (int i = 0; i < obj->array->count; i++) {
+      size += calculateObjectSize(&obj->array->elements[i]);
+    }
+    return size;
+  } else if (strcmp(obj->type, "Hash") == 0) {
+    size_t size = 1 + sizeof(int32_t); // tag + pair count
+    // Iterate through all buckets to count pairs
+    for (int i = 0; i < obj->hash->bucketCount; i++) {
+      HashEntry *entry = obj->hash->buckets[i];
+      while (entry != NULL) {
+        size += calculateObjectSize(&entry->key);
+        size += calculateObjectSize(&entry->value);
+        entry = entry->next;
+      }
+    }
+    return size;
+  } else if (strcmp(obj->type, "CompiledFunction") == 0) {
+    return 1 + sizeof(int32_t) + obj->compiledFunction->instructionCount + sizeof(int32_t) + sizeof(int32_t);
+  }
+  return 0; // unsupported type
+}
+
+// Forward declaration
+static size_t serializeObject(Object *obj, unsigned char *buf, size_t offset);
+
+// Serialize an object to buffer
+static size_t serializeObject(Object *obj, unsigned char *buf, size_t offset) {
+  if (strcmp(obj->type, "Integer") == 0) {
+    uint8_t tag = CONST_INTEGER;
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    write_le64(buf + offset, obj->integer->value);
+    offset += sizeof(int64_t);
+    
+  } else if (strcmp(obj->type, "String") == 0) {
+    uint8_t tag = CONST_STRING;
+    int32_t len = strlen(obj->string->value);
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    write_le32(buf + offset, len);
+    offset += sizeof(int32_t);
+    memcpy(buf + offset, obj->string->value, len);
+    offset += len;
+    
+  } else if (strcmp(obj->type, "Boolean") == 0) {
+    uint8_t tag = CONST_BOOLEAN;
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    uint8_t val = obj->boolean->value ? 1 : 0;
+    memcpy(buf + offset, &val, 1);
+    offset += 1;
+    
+  } else if (strcmp(obj->type, "Null") == 0) {
+    uint8_t tag = CONST_NULL;
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    
+  } else if (strcmp(obj->type, "Array") == 0) {
+    uint8_t tag = CONST_ARRAY;
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    write_le32(buf + offset, obj->array->count);
+    offset += sizeof(int32_t);
+    for (int i = 0; i < obj->array->count; i++) {
+      offset = serializeObject(&obj->array->elements[i], buf, offset);
+    }
+    
+  } else if (strcmp(obj->type, "Hash") == 0) {
+    uint8_t tag = CONST_HASH;
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    write_le32(buf + offset, obj->hash->size); // number of key-value pairs
+    offset += sizeof(int32_t);
+    // Serialize all key-value pairs
+    for (int i = 0; i < obj->hash->bucketCount; i++) {
+      HashEntry *entry = obj->hash->buckets[i];
+      while (entry != NULL) {
+        offset = serializeObject(&entry->key, buf, offset);
+        offset = serializeObject(&entry->value, buf, offset);
+        entry = entry->next;
+      }
+    }
+    
+  } else if (strcmp(obj->type, "CompiledFunction") == 0) {
+    uint8_t tag = CONST_COMPILED_FUNCTION;
+    CompiledFunction *fn = obj->compiledFunction;
+    memcpy(buf + offset, &tag, 1);
+    offset += 1;
+    write_le32(buf + offset, fn->instructionCount);
+    offset += sizeof(int32_t);
+    memcpy(buf + offset, fn->instructions, fn->instructionCount);
+    offset += fn->instructionCount;
+    write_le32(buf + offset, fn->numLocals);
+    offset += sizeof(int32_t);
+    write_le32(buf + offset, fn->numParameters);
+    offset += sizeof(int32_t);
+  }
+  return offset;
+}
+
 SerializedBytecode serializeBytecode(ByteCode *bc) {
   int instr_len = bc->instructionCount;
   int const_count = bc->constantsCount;
@@ -108,20 +227,11 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
 
   for (int i = 0; i < const_count; i++) {
     Object *obj = &bc->constants[i];
-    size += 1; // tag
-    if (strcmp(obj->type, "Integer") == 0) {
-      size += sizeof(int64_t);
-    } else if (strcmp(obj->type, "String") == 0) {
-      int32_t len = strlen(obj->string->value);
-      size += sizeof(int32_t); // string length
-      size += len;             // string content
-    } else if (strcmp(obj->type, "CompiledFunction") == 0) {
-      size += sizeof(int32_t); // instruction count
-      size += obj->compiledFunction->instructionCount; // instructions
-      size += sizeof(int32_t); // numLocals
-      size += sizeof(int32_t); // numParameters
-    } else {
+    size_t obj_size = calculateObjectSize(obj);
+    if (obj_size == 0) {
       fprintf(stderr, "⚠️ Skipping unsupported constant[%d] with type: %s\n", i, obj->type);
+    } else {
+      size += obj_size;
     }
   }
 
@@ -148,60 +258,33 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
   for (int i = 0; i < const_count; i++) {
     Object *obj = &bc->constants[i];
     printf("🔍 Constant[%d] type = '%s'\n", i, obj->type);
-
-    if (strcmp(obj->type, "Integer") == 0) {
-      uint8_t tag = CONST_INTEGER;
-      memcpy(buf + offset, &tag, 1);
-      offset += 1;
-
-      write_le64(buf + offset, obj->integer->value);
-      offset += sizeof(int64_t);
-
-      printf("   ↳ INTEGER value = %lld (8 bytes)\n", obj->integer->value);
-
-    } else if (strcmp(obj->type, "String") == 0) {
-      uint8_t tag = CONST_STRING;
-      int32_t len = strlen(obj->string->value);
-
-      memcpy(buf + offset, &tag, 1);
-      offset += 1;
-
-      write_le32(buf + offset, len);
-      offset += sizeof(int32_t);
-
-      memcpy(buf + offset, obj->string->value, len);
-      offset += len;
-
-      printf("   ↳ STRING length = %d, value = \"%s\"\n", len, obj->string->value);
-
-    } else if (strcmp(obj->type, "CompiledFunction") == 0) {
-      uint8_t tag = CONST_COMPILED_FUNCTION;
-      CompiledFunction *fn = obj->compiledFunction;
-      
-      memcpy(buf + offset, &tag, 1);
-      offset += 1;
-      
-      // Write instruction count
-      write_le32(buf + offset, fn->instructionCount);
-      offset += sizeof(int32_t);
-      
-      // Write instructions
-      memcpy(buf + offset, fn->instructions, fn->instructionCount);
-      offset += fn->instructionCount;
-      
-      // Write numLocals
-      write_le32(buf + offset, fn->numLocals);
-      offset += sizeof(int32_t);
-      
-      // Write numParameters
-      write_le32(buf + offset, fn->numParameters);
-      offset += sizeof(int32_t);
-      
-      printf("   ↳ COMPILED_FUNCTION instructions=%d, locals=%d, params=%d\n", 
-             fn->instructionCount, fn->numLocals, fn->numParameters);
-
-    } else {
+    
+    size_t old_offset = offset;
+    offset = serializeObject(obj, buf, offset);
+    
+    if (offset == old_offset) {
       printf("   ⚠️ Unknown type, skipped.\n");
+    } else {
+      size_t obj_size = offset - old_offset;
+      if (strcmp(obj->type, "Integer") == 0) {
+        printf("   ↳ INTEGER value = %lld (%zu bytes)\n", obj->integer->value, obj_size);
+      } else if (strcmp(obj->type, "String") == 0) {
+        printf("   ↳ STRING length = %d, value = \"%s\" (%zu bytes)\n", 
+               (int)strlen(obj->string->value), obj->string->value, obj_size);
+      } else if (strcmp(obj->type, "Boolean") == 0) {
+        printf("   ↳ BOOLEAN value = %s (%zu bytes)\n", 
+               obj->boolean->value ? "true" : "false", obj_size);
+      } else if (strcmp(obj->type, "Null") == 0) {
+        printf("   ↳ NULL (%zu bytes)\n", obj_size);
+      } else if (strcmp(obj->type, "Array") == 0) {
+        printf("   ↳ ARRAY count = %d (%zu bytes)\n", obj->array->count, obj_size);
+      } else if (strcmp(obj->type, "Hash") == 0) {
+        printf("   ↳ HASH pairs = %d (%zu bytes)\n", obj->hash->size, obj_size);
+      } else if (strcmp(obj->type, "CompiledFunction") == 0) {
+        printf("   ↳ COMPILED_FUNCTION instructions=%d, locals=%d, params=%d (%zu bytes)\n", 
+               obj->compiledFunction->instructionCount, obj->compiledFunction->numLocals, 
+               obj->compiledFunction->numParameters, obj_size);
+      }
     }
   }
 
