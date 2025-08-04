@@ -72,6 +72,7 @@ char *readFile(const char *filename) {
 
 #define CONST_INTEGER 1
 #define CONST_STRING  2
+#define CONST_COMPILED_FUNCTION 3
 
 // Little-endian encoding/decoding helpers
 static void write_le32(unsigned char *buf, uint32_t val) {
@@ -114,6 +115,11 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
       int32_t len = strlen(obj->string->value);
       size += sizeof(int32_t); // string length
       size += len;             // string content
+    } else if (strcmp(obj->type, "CompiledFunction") == 0) {
+      size += sizeof(int32_t); // instruction count
+      size += obj->compiledFunction->instructionCount; // instructions
+      size += sizeof(int32_t); // numLocals
+      size += sizeof(int32_t); // numParameters
     } else {
       fprintf(stderr, "⚠️ Skipping unsupported constant[%d] with type: %s\n", i, obj->type);
     }
@@ -167,6 +173,32 @@ SerializedBytecode serializeBytecode(ByteCode *bc) {
       offset += len;
 
       printf("   ↳ STRING length = %d, value = \"%s\"\n", len, obj->string->value);
+
+    } else if (strcmp(obj->type, "CompiledFunction") == 0) {
+      uint8_t tag = CONST_COMPILED_FUNCTION;
+      CompiledFunction *fn = obj->compiledFunction;
+      
+      memcpy(buf + offset, &tag, 1);
+      offset += 1;
+      
+      // Write instruction count
+      write_le32(buf + offset, fn->instructionCount);
+      offset += sizeof(int32_t);
+      
+      // Write instructions
+      memcpy(buf + offset, fn->instructions, fn->instructionCount);
+      offset += fn->instructionCount;
+      
+      // Write numLocals
+      write_le32(buf + offset, fn->numLocals);
+      offset += sizeof(int32_t);
+      
+      // Write numParameters
+      write_le32(buf + offset, fn->numParameters);
+      offset += sizeof(int32_t);
+      
+      printf("   ↳ COMPILED_FUNCTION instructions=%d, locals=%d, params=%d\n", 
+             fn->instructionCount, fn->numLocals, fn->numParameters);
 
     } else {
       printf("   ⚠️ Unknown type, skipped.\n");

@@ -9,6 +9,7 @@
 #define BYTECODE_MARKER "MONKEY_BYTECODE"
 #define CONST_INTEGER 1
 #define CONST_STRING  2
+#define CONST_COMPILED_FUNCTION 3
 
 // Little-endian decoding helpers
 static uint32_t read_le32(const unsigned char *buf) {
@@ -104,6 +105,50 @@ ByteCode *deserializeBytecode(unsigned char *data, int total_len) {
 
       bc->constants[i].type = "String";
       bc->constants[i].string = strObj;
+
+    } else if (tag == CONST_COMPILED_FUNCTION) {
+      // Read instruction count
+      if (offset + sizeof(int32_t) > total_len) {
+        fprintf(stderr, "❌ truncated compiled function instruction count at [%d]\n", i);
+        exit(1);
+      }
+      int32_t instr_count = read_le32(data + offset);
+      offset += sizeof(int32_t);
+      
+      // Read instructions
+      if (offset + instr_count > total_len) {
+        fprintf(stderr, "❌ truncated compiled function instructions at [%d]\n", i);
+        exit(1);
+      }
+      unsigned char *instructions = malloc(instr_count);
+      memcpy(instructions, data + offset, instr_count);
+      offset += instr_count;
+      
+      // Read numLocals
+      if (offset + sizeof(int32_t) > total_len) {
+        fprintf(stderr, "❌ truncated compiled function numLocals at [%d]\n", i);
+        exit(1);
+      }
+      int32_t numLocals = read_le32(data + offset);
+      offset += sizeof(int32_t);
+      
+      // Read numParameters
+      if (offset + sizeof(int32_t) > total_len) {
+        fprintf(stderr, "❌ truncated compiled function numParameters at [%d]\n", i);
+        exit(1);
+      }
+      int32_t numParameters = read_le32(data + offset);
+      offset += sizeof(int32_t);
+      
+      // Create CompiledFunction object
+      CompiledFunction *fnObj = malloc(sizeof(CompiledFunction));
+      fnObj->instructions = instructions;
+      fnObj->instructionCount = instr_count;
+      fnObj->numLocals = numLocals;
+      fnObj->numParameters = numParameters;
+      
+      bc->constants[i].type = "CompiledFunction";
+      bc->constants[i].compiledFunction = fnObj;
 
     } else {
       fprintf(stderr, "❌ unknown constant tag: %d at constant[%d]\n", tag, i);
