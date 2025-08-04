@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// operator precedence levels for pratt parser
 #define PREC_LOWEST 1
 #define PREC_EQUALS 2
 #define PREC_LESSGREATER 3
@@ -17,6 +18,7 @@ typedef struct {
   int precedence;
 } PrecedenceEntry;
 
+// precedence table mapping token types to their precedence levels
 static PrecedenceEntry precedenceTable[] = {
     {EQ, PREC_EQUALS},      {NOT_EQ, PREC_EQUALS},    {LT, PREC_LESSGREATER},
     {GT, PREC_LESSGREATER}, {PLUS, PREC_SUM},         {MINUS, PREC_SUM},
@@ -24,6 +26,7 @@ static PrecedenceEntry precedenceTable[] = {
     {LBRACKET, PREC_INDEX},
 };
 
+// create a new parser with registered parsing functions
 Parser *newParser(Lexer *lexer) {
   Parser *parser = malloc(sizeof(Parser));
   parser->lexer = lexer;
@@ -32,6 +35,7 @@ Parser *newParser(Lexer *lexer) {
   parser->prefixCount = 0;
   parser->infixCount = 0;
 
+  // register prefix parsing functions
   registerPrefix(parser, IDENTIFIER, parseIdentifier);
   registerPrefix(parser, INT, parseIntegerLiteral);
   registerPrefix(parser, TRUE_TOK, parseBoolean);
@@ -44,6 +48,8 @@ Parser *newParser(Lexer *lexer) {
   registerPrefix(parser, STRING, parseStringLiteral);
   registerPrefix(parser, LBRACKET, parseArrayLiteral);
   registerPrefix(parser, LBRACE, parseHashLiteral);
+  
+  // register infix parsing functions
   registerInfix(parser, PLUS, parseInfixExpression);
   registerInfix(parser, MINUS, parseInfixExpression);
   registerInfix(parser, SLASH, parseInfixExpression);
@@ -60,6 +66,7 @@ Parser *newParser(Lexer *lexer) {
   return parser;
 }
 
+// free parser memory and error messages
 void freeParser(Parser *parser) {
   for (int i = 0; i < parser->errorCount; i++)
     free(parser->errors[i]);
@@ -67,6 +74,7 @@ void freeParser(Parser *parser) {
   free(parser);
 }
 
+// get parser errors for error reporting
 char **parserErrors(Parser *parser, int *count) {
   *count = parser->errorCount;
   return parser->errors;

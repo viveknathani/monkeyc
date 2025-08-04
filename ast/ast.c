@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// strdup compatibility for systems that don't have it
 #ifndef _POSIX_C_SOURCE
 char *strdup(const char *s) {
   size_t len = strlen(s) + 1;
@@ -14,6 +15,9 @@ char *strdup(const char *s) {
 }
 #endif
 
+// ===== AST NODE CONSTRUCTORS =====
+
+// create a new let statement node
 LetStatement *newLetStatement(Token token, Identifier *name,
                               Expression *value) {
   LetStatement *stmt = malloc(sizeof(LetStatement));
@@ -23,6 +27,7 @@ LetStatement *newLetStatement(Token token, Identifier *name,
   return stmt;
 }
 
+// create a new identifier node
 Identifier *newIdentifier(Token token, const char *value) {
   Identifier *ident = malloc(sizeof(Identifier));
   ident->token = cloneToken(token);
@@ -86,6 +91,9 @@ HashLiteral *newHashLiteral(Token token, Expression **keys, Expression **values,
   hl->count = count;
   return hl;
 }
+
+// ===== EXPRESSION WRAPPER FUNCTIONS =====
+// these functions wrap specific node types into generic Expression structs
 
 Expression *wrapIntegerLiteral(IntegerLiteral *il) {
   Expression *expr = malloc(sizeof(Expression));

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// peek at the next character without advancing position
 unsigned char peekChar(Lexer *lexer) {
   if (lexer->nextPosition >= lexer->inputLength) {
     return 0;
@@ -10,6 +11,7 @@ unsigned char peekChar(Lexer *lexer) {
   return lexer->input[lexer->nextPosition];
 }
 
+// advance to next character and update positions
 void readChar(Lexer *lexer) {
   if (lexer->nextPosition >= lexer->inputLength) {
     lexer->currentChar = 0;
@@ -32,6 +34,7 @@ Lexer *newLexer(char *input) {
   return lexer;
 }
 
+// create a null-terminated string from a single character
 char *createSingleCharLiteral(unsigned char ch) {
   char *literal = malloc(2);
   if (!literal)
@@ -43,6 +46,7 @@ char *createSingleCharLiteral(unsigned char ch) {
   return literal;
 }
 
+// read string literal between quotes
 char *readString(Lexer *lexer) {
   int start = lexer->position + 1;
 
@@ -64,12 +68,17 @@ char *readString(Lexer *lexer) {
   return out;
 }
 
+// check if character is a letter or underscore
 int isLetter(unsigned char ch) {
   return (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || (ch == '_'));
 }
 
-int isDigit(unsigned char ch) { return '0' <= ch && ch <= '9'; }
+// check if character is a digit
+int isDigit(unsigned char ch) { 
+  return '0' <= ch && ch <= '9'; 
+}
 
+// skip whitespace characters (space, tab, newline, carriage return)
 void skipWhitespace(Lexer *lexer) {
   for (;;) {
     if ((lexer->currentChar == ' ') || (lexer->currentChar == '\t') ||
@@ -81,6 +90,7 @@ void skipWhitespace(Lexer *lexer) {
   }
 }
 
+// read a sequence of digits as a number
 char *readNumber(Lexer *lexer) {
   int start = lexer->position;
   while (isDigit(lexer->currentChar)) {
@@ -97,6 +107,7 @@ char *readNumber(Lexer *lexer) {
   return num;
 }
 
+// read identifier (letters and underscores)
 char *readIdentifier(Lexer *lexer) {
   int start = lexer->position;
   while (isLetter(lexer->currentChar)) {
@@ -113,6 +124,19 @@ char *readIdentifier(Lexer *lexer) {
   return id;
 }
 
+// helper function to create two-character tokens like == and !=
+char *createTwoCharLiteral(unsigned char first, unsigned char second) {
+  char *literal = malloc(3);
+  if (literal == NULL) {
+    abort();
+  }
+  literal[0] = first;
+  literal[1] = second;
+  literal[2] = '\0';
+  return literal;
+}
+
+// main tokenization function - converts input into tokens
 Token nextToken(Lexer *lexer) {
   Token token;
 
@@ -123,16 +147,7 @@ Token nextToken(Lexer *lexer) {
     if (peekChar(lexer) == '=') {
       unsigned char currentChar = lexer->currentChar;
       readChar(lexer);
-
-      char *literal = malloc(3);
-      if (literal == NULL) {
-        abort();
-      }
-      literal[0] = currentChar;
-      literal[1] = lexer->currentChar;
-      literal[2] = '\0';
-
-      token = newToken(EQ, literal);
+      token = newToken(EQ, createTwoCharLiteral(currentChar, lexer->currentChar));
     } else {
       token = newToken(ASSIGN, createSingleCharLiteral(lexer->currentChar));
     }
@@ -153,16 +168,7 @@ Token nextToken(Lexer *lexer) {
     if (peekChar(lexer) == '=') {
       unsigned char currentChar = lexer->currentChar;
       readChar(lexer);
-
-      char *literal = malloc(3);
-      if (literal == NULL) {
-        abort();
-      }
-      literal[0] = currentChar;
-      literal[1] = lexer->currentChar;
-      literal[2] = '\0';
-
-      token = newToken(NOT_EQ, literal);
+      token = newToken(NOT_EQ, createTwoCharLiteral(currentChar, lexer->currentChar));
     } else {
       token = newToken(BANG, createSingleCharLiteral(lexer->currentChar));
     }
