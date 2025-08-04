@@ -229,18 +229,44 @@ void runSource(char *input) {
   Parser *parser = newParser(lexer);
   Program *program = parseProgram(parser);
 
+  // Check for parser errors
+  if (parser->errors && parser->errorCount > 0) {
+    printf("Parser errors found:\n");
+    for (int i = 0; i < parser->errorCount; i++) {
+      printf("  %s\n", parser->errors[i]);
+    }
+    return;
+  }
+
   Compiler *compiler = newCompiler();
   compileProgram(compiler, program);
 
-  ByteCode *bytecode =getByteCode(compiler);
+  ByteCode *bytecode = getByteCode(compiler);
+  printf("Bytecode generated: %d instructions, %d constants\n", 
+         bytecode->instructionCount, bytecode->constantsCount);
 
   VM *vm = newVM(bytecode);
+  if (!vm) {
+    printf("Failed to create VM\n");
+    return;
+  }
 
   printf("running vm...\n");
-  run(vm);
-  printf("ran vm...\n");
-  char *buf = inspect(stackTop(vm));
-  printf("%s\n", buf) ;
+  int result = run(vm);
+  printf("ran vm... (result: %d)\n", result);
+  printf("Stack pointer: %d\n", vm->sp);
+  
+  Object *top = stackTop(vm);
+  if (top == NULL) {
+    printf("No result on stack\n");
+  } else {
+    char *buf = inspect(top);
+    if (buf == NULL) {
+      printf("inspect returned NULL\n");
+    } else {
+      printf("%s\n", buf);
+    }
+  }
 }
 
 void repl() {
