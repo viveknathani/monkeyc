@@ -1,0 +1,5 @@
+if (null == null) {
+    1
+} else {
+    0
+}

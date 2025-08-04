@@ -1,0 +1,11 @@
+let t = true;
+let f = false;
+
+let not_t = !t;
+let not_f = !f;
+
+if (t) {
+    42
+} else {
+    0
+}

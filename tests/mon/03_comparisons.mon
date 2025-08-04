@@ -1,0 +1,26 @@
+let a = 10;
+let b = 5;
+let c = 10;
+
+let eq = a == c;
+let neq = a != b;
+let lt = b < a;
+let gt = a > b;
+
+if (eq) {
+    if (neq) {
+        if (lt) {
+            if (gt) {
+                100
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    } else {
+        0
+    }
+} else {
+    0
+}

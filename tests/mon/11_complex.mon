@@ -1,0 +1,9 @@
+let calc = fn(x) {
+    if (x > 5) {
+        return x * 2;
+    } else {
+        return x + 1;
+    }
+};
+
+calc(10) + calc(3)
