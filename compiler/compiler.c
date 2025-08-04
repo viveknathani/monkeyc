@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define INITIAL_CONSTANTS_CAPACITY 256
-#define INITIAL_INSTRUCTIONS_CAPACITY 1024
-#define INITIAL_SCOPES_CAPACITY 8
+// initial capacities for dynamic arrays - these grow as needed
+#define INITIAL_CONSTANTS_CAPACITY 256     // constants pool starting size
+#define INITIAL_INSTRUCTIONS_CAPACITY 1024 // bytecode instructions starting size
+#define INITIAL_SCOPES_CAPACITY 8          // compilation scopes starting size
 
 static int compileExpression(Compiler *compiler, Expression *expression);
 static int compileBlockStatement(Compiler *compiler, BlockStatement *block);
@@ -35,19 +36,13 @@ Compiler *newCompiler() {
 
   compiler->symbolTable = newSymbolTable();
 
-  // Define built-in functions
-  BuiltinEntry *builtins = malloc(sizeof(BuiltinEntry) * 6);
-  builtins[0] = (BuiltinEntry){"len", NULL};
-  builtins[1] = (BuiltinEntry){"first", NULL};
-  builtins[2] = (BuiltinEntry){"last", NULL};
-  builtins[3] = (BuiltinEntry){"rest", NULL};
-  builtins[4] = (BuiltinEntry){"push", NULL};
-  builtins[5] = (BuiltinEntry){"puts", NULL};
-
-  for (int i = 0; i < 6; i++) {
-    defineBuiltin(compiler->symbolTable, builtins[i].name, i);
+  // define built-in functions in symbol table
+  const char* builtinNames[] = {"len", "first", "last", "rest", "push", "puts"};
+  const int builtinCount = sizeof(builtinNames) / sizeof(builtinNames[0]);
+  
+  for (int i = 0; i < builtinCount; i++) {
+    defineBuiltin(compiler->symbolTable, (char*)builtinNames[i], i);
   }
-  free(builtins);
 
   // Initialize scopes
   compiler->scopes = malloc(sizeof(CompilationScope) * INITIAL_SCOPES_CAPACITY);

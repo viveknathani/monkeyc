@@ -104,7 +104,12 @@ void freeVM(VM *vm) {
 
 Frame *currentFrame(VM *vm) { return &vm->frames[vm->framesIndex - 1]; }
 
+// push call frame with overflow protection
 void pushFrame(VM *vm, Frame *frame) {
+  if (vm->framesIndex >= MAX_FRAMES) {
+    fprintf(stderr, "call stack overflow: exceeded maximum frames of %d\n", MAX_FRAMES);
+    return;
+  }
   vm->frames[vm->framesIndex] = *frame;
   vm->framesIndex++;
 }
@@ -128,21 +133,29 @@ VM *newVMWithGlobalStore(ByteCode *bytecode, Object *globals, int globalCount) {
   return vm;
 }
 
+// push object onto vm stack with overflow protection
 int push(VM *vm, Object *object) {
   if (vm->sp >= STACK_SIZE) {
-    return -1; // Stack overflow
+    fprintf(stderr, "stack overflow: exceeded maximum stack size of %d\n", STACK_SIZE);
+    return -1;
   }
+
   vm->stack[vm->sp] = *object;
   vm->sp++;
+
   return 0;
 }
 
+// pop object from vm stack with underflow protection
 Object *pop(VM *vm) {
-  if (vm->sp <= 0) {
+  if (vm->sp == 0) {
+    fprintf(stderr, "stack underflow: attempted to pop from empty stack\n");
     return NULL;
   }
+
+  Object *obj = &vm->stack[vm->sp - 1];
   vm->sp--;
-  return &vm->stack[vm->sp];
+  return obj;
 }
 
 Object *stackTop(VM *vm) {

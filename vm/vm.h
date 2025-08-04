@@ -5,8 +5,12 @@
 #include "../frame/frame.h"
 #include "../compiler/compiler.h"
 
+// vm limits - these are reasonable defaults for most programs
+// stack size: max depth of expression evaluation and function calls
 #define STACK_SIZE 2048
+// global variables: max number of global bindings (let statements at top level)
 #define GLOBAL_SIZE 65536
+// call frames: max depth of function call nesting
 #define MAX_FRAMES 1024
 
 typedef struct VM VM;
