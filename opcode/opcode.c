@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+// opcode definitions with operand widths and counts
+// format: {name, {width1, width2}, operand_count}
 Definition definitions[MAX_OPCODE + 1] = {
     [OpConstant] = {"OpConstant", {2, 0}, 1},
     [OpPop] = {"OpPop", {0, 0}, 0},
@@ -35,6 +37,7 @@ Definition definitions[MAX_OPCODE + 1] = {
     [OpGetFree] = {"OpGetFree", {1, 0}, 1},
 };
 
+// fast opcode lookup with bounds checking
 int lookupOpCode(char opCode, Definition *out) {
   if (opCode < 0 || opCode > MAX_OPCODE) {
     return -1;

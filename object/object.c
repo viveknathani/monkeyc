@@ -5,6 +5,7 @@
 #include <string.h>
 
 // === Environment Implementation ===
+// environments use linear search for simplicity - good for small scopes
 
 #define INITIAL_ENV_CAPACITY 8
 
@@ -23,19 +24,24 @@ Environment *newEnclosedEnvironment(Environment *outer) {
   return env;
 }
 
+// lookup variable in environment chain (current -> outer)
 Object *getFromEnvironment(Environment *env, char *name) {
+  // search current scope first
   for (int i = 0; i < env->storeCount; i++) {
     if (strcmp(env->store[i].key, name) == 0) {
       return &env->store[i].value;
     }
   }
+  // recurse to outer scope if not found
   if (env->outer) {
     return getFromEnvironment(env->outer, name);
   }
   return NULL;
 }
 
+// set variable in environment (updates existing or creates new)
 Object *setInEnvironment(Environment *env, char *name, Object value) {
+  // check if variable already exists - update in place
   for (int i = 0; i < env->storeCount; i++) {
     if (strcmp(env->store[i].key, name) == 0) {
       env->store[i].value = value;
@@ -203,6 +209,7 @@ Object *builtin_puts(Object **args, int argCount) {
   return nullObj;
 }
 
+// builtin function registry - maps names to function pointers
 BuiltinEntry builtins[] = {
     {BuiltinFuncNameLen, &(Builtin){.function = builtin_len}},
     {BuiltinFuncNameFirst, &(Builtin){.function = builtin_first}},

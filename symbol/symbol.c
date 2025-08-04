@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+// initial capacities for dynamic arrays
 #define INITIAL_STORE_CAPACITY 8
 #define INITIAL_FREE_CAPACITY 4
 
+// create new symbol table with initial capacity
 SymbolTable *newSymbolTable() {
   SymbolTable *table = malloc(sizeof(SymbolTable));
   table->outer = NULL;
@@ -25,6 +27,7 @@ SymbolTable *newEnclosedSymbolTable(SymbolTable *outer) {
   return table;
 }
 
+// define a new symbol in the table with automatic scope detection
 Symbol define(SymbolTable *symbolTable, char *name) {
   Symbol symbol;
   symbol.name = strdup(name);
