@@ -15,8 +15,7 @@
 #define BYTECODE_MARKER "MONKEY_BYTECODE"
 #include "vm_stub_embed.h"
 
-#define VERSION "1.0.0"
-#define PROGRAM_NAME "monkeyc"
+#define VERSION "0.1.0"
 
 typedef struct {
   unsigned char *data;
@@ -398,7 +397,7 @@ void repl() {
 
 // --- Print usage information ---
 void printUsage(const char *program_name) {
-  printf("MonkeyC Programming Language v%s\n\n", VERSION);
+  printf("monkeyc programming language v%s\n\n", VERSION);
   printf("USAGE:\n");
   printf("  %s                           Start interactive REPL\n", program_name);
   printf("  %s <file.mon>                Run a MonkeyC script\n", program_name);
